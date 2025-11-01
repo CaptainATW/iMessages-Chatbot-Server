@@ -4,4 +4,5 @@ __pycache__/
 *.db
 *.log
 .DS_Store
-
+.gitignore
+README.md
