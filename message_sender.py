@@ -21,10 +21,39 @@ class MessageSender:
         
         applescript = f'''
         tell application "Messages"
-            try
-                set targetChat to first chat whose participants contains participant "{escaped_recipient}"
-                set unread of targetChat to false
-            end try
+            activate
+            delay 0.3
+        end tell
+        
+        tell application "System Events"
+            tell process "Messages"
+                try
+                    set frontmost to true
+                    delay 0.2
+                    
+                    set chatFound to false
+                    repeat with aRow in (rows of table 1 of scroll area 1 of splitter group 1 of window 1)
+                        if description of aRow contains "{escaped_recipient}" then
+                            select aRow
+                            set chatFound to true
+                            delay 0.3
+                            exit repeat
+                        end if
+                    end repeat
+                    
+                    if not chatFound then
+                        keystroke "n" using command down
+                        delay 0.5
+                        keystroke "{escaped_recipient}"
+                        delay 0.5
+                        keystroke return
+                        delay 0.3
+                    end if
+                    
+                on error errMsg
+                    return errMsg
+                end try
+            end tell
         end tell
         '''
         
@@ -58,6 +87,7 @@ class MessageSender:
         applescript = f'''
         tell application "Messages"
             activate
+            delay 0.3
         end tell
         
         tell application "System Events"
@@ -66,17 +96,33 @@ class MessageSender:
                     set frontmost to true
                     delay 0.2
                     
-                    set targetWindow to window 1
+                    set chatFound to false
+                    repeat with aRow in (rows of table 1 of scroll area 1 of splitter group 1 of window 1)
+                        if description of aRow contains "{escaped_recipient}" then
+                            select aRow
+                            set chatFound to true
+                            delay 0.3
+                            exit repeat
+                        end if
+                    end repeat
                     
-                    click button 1 of targetWindow
+                    if not chatFound then
+                        keystroke "n" using command down
+                        delay 0.5
+                        keystroke "{escaped_recipient}"
+                        delay 0.5
+                        keystroke return
+                        delay 0.3
+                    end if
+                    
+                    click text area 1 of splitter group 1 of window 1
                     delay 0.1
                     
-                    keystroke "{escaped_recipient}"
-                    delay 0.3
-                    keystroke return
-                    delay 0.2
-                    
-                    set value of text area 1 of splitter group 1 of targetWindow to "..."
+                    keystroke "."
+                    delay 0.05
+                    keystroke "."
+                    delay 0.05
+                    keystroke "."
                     
                 on error errMsg
                     return errMsg
@@ -110,14 +156,15 @@ class MessageSender:
             return False
     
     async def clear_typing_indicator(self, recipient: str) -> bool:
-        escaped_recipient = self._escape_applescript_string(recipient)
-        
         applescript = f'''
         tell application "System Events"
             tell process "Messages"
                 try
-                    set targetWindow to window 1
-                    set value of text area 1 of splitter group 1 of targetWindow to ""
+                    click text area 1 of splitter group 1 of window 1
+                    delay 0.05
+                    keystroke "a" using command down
+                    delay 0.05
+                    key code 51
                 on error errMsg
                     return errMsg
                 end try
