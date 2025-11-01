@@ -1,85 +1,72 @@
-import aiohttp
-import asyncio
 import logging
 from typing import List, Optional
+from google import genai
+from google.genai import types
 from config import Config
 
 logger = logging.getLogger(__name__)
 
 class AIClient:
     def __init__(self):
-        self.endpoint = Config.AI_API_ENDPOINT
-        self.api_key = Config.AI_API_KEY
-        self.timeout = aiohttp.ClientTimeout(total=Config.AI_API_TIMEOUT)
-        self.session = None
-    
+        self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
+        self.model = 'gemini-2.5-flash'
+        try:
+            with open('system_instruction.txt', 'r', encoding='utf-8') as f:
+                self.system_instruction = f.read().strip()
+        except FileNotFoundError:
+            logger.warning("system_instruction.txt not found, using default system instruction.")
+            self.system_instruction = 'You are a helpful, empathetic AI assistant.'
     async def init_session(self):
-        self.session = aiohttp.ClientSession(timeout=self.timeout)
-        logger.info("AI client session initialized")
+        logger.info("Gemini AI client initialized")
     
     async def close_session(self):
-        if self.session:
-            await self.session.close()
-            logger.info("AI client session closed")
+        logger.info("Gemini AI client closed")
     
     async def get_response(self, sender_id: str, message_text: str, conversation_history: List[dict]) -> Optional[str]:
-        if not self.session:
-            await self.init_session()
-        
-        payload = {
-            'sender_id': sender_id,
-            'message_text': message_text,
-            'conversation_history': conversation_history
-        }
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self.api_key}'
-        }
-        
-        max_retries = 3
-        base_delay = 1
-        
-        for attempt in range(max_retries):
-            try:
-                logger.debug(f"Sending request to AI API (attempt {attempt + 1}/{max_retries})")
-                async with self.session.post(self.endpoint, json=payload, headers=headers) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        reply_text = data.get('reply', data.get('response', data.get('text')))
-                        
-                        if reply_text:
-                            logger.info(f"Received AI response for {sender_id}")
-                            return reply_text
-                        else:
-                            logger.error(f"AI response missing reply field: {data}")
-                            return None
-                    else:
-                        error_text = await response.text()
-                        logger.error(f"AI API returned status {response.status}: {error_text}")
-                        
-                        if response.status >= 500 and attempt < max_retries - 1:
-                            delay = base_delay * (2 ** attempt)
-                            logger.info(f"Retrying after {delay}s due to server error")
-                            await asyncio.sleep(delay)
-                            continue
-                        return None
-                        
-            except asyncio.TimeoutError:
-                logger.error(f"AI API request timed out (attempt {attempt + 1}/{max_retries})")
-                if attempt < max_retries - 1:
-                    delay = base_delay * (2 ** attempt)
-                    await asyncio.sleep(delay)
-                    continue
+        try:
+            contents = self._build_conversation_contents(conversation_history, message_text)
+            
+            config = types.GenerateContentConfig(
+                system_instruction=self.system_instruction,
+                temperature=0.7,
+            )
+            
+            logger.debug(f"Sending request to Gemini API for {sender_id}")
+            
+            response = await self.client.aio.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=config
+            )
+            
+            if response and response.text:
+                logger.info(f"Received Gemini response for {sender_id}")
+                return response.text
+            else:
+                logger.error(f"Gemini response missing text content")
                 return None
                 
-            except Exception as e:
-                logger.error(f"Error calling AI API: {e}", exc_info=True)
-                if attempt < max_retries - 1:
-                    delay = base_delay * (2 ** attempt)
-                    await asyncio.sleep(delay)
-                    continue
-                return None
+        except Exception as e:
+            logger.error(f"Gemini API error: {e}", exc_info=True)
+            return None
+    
+    def _build_conversation_contents(self, history: List[dict], current_message: str) -> List[types.Content]:
+        contents = []
         
-        return None
-
+        for msg in history:
+            role = "user" if msg['is_from_user'] else "model"
+            contents.append(
+                types.Content(
+                    role=role,
+                    parts=[types.Part.from_text(text=msg['message'])]
+                )
+            )
+        
+        contents.append(
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=current_message)]
+            )
+        )
+        
+        return contents
