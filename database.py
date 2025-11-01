@@ -19,9 +19,13 @@ class ConversationDatabase:
                 sender_id TEXT NOT NULL,
                 message_text TEXT NOT NULL,
                 is_from_user INTEGER NOT NULL,
-                timestamp REAL NOT NULL,
-                INDEX idx_sender_timestamp (sender_id, timestamp)
+                timestamp REAL NOT NULL
             )
+        ''')
+        
+        await self.db.execute('''
+            CREATE INDEX IF NOT EXISTS idx_sender_timestamp 
+            ON messages (sender_id, timestamp)
         ''')
         
         await self.db.execute('''

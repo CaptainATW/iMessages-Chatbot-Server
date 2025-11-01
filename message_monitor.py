@@ -9,6 +9,18 @@ class MessageMonitor:
     def __init__(self, chat_db_path: str = None):
         self.chat_db_path = chat_db_path or Config.CHAT_DB_PATH
     
+    async def get_current_max_row_id(self) -> int:
+        try:
+            async with aiosqlite.connect(f'file:{self.chat_db_path}?mode=ro', uri=True) as db:
+                cursor = await db.execute('SELECT MAX(ROWID) FROM message')
+                row = await cursor.fetchone()
+                max_id = row[0] if row and row[0] else 0
+                logger.info(f"Current max ROWID in Messages database: {max_id}")
+                return max_id
+        except Exception as e:
+            logger.error(f"Error getting max ROWID: {e}", exc_info=True)
+            return 0
+    
     async def poll_new_messages(self, last_row_id: int) -> Tuple[List[Tuple[str, str, int]], int]:
         try:
             async with aiosqlite.connect(f'file:{self.chat_db_path}?mode=ro', uri=True) as db:

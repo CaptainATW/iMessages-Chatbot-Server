@@ -70,6 +70,13 @@ class EchoServer:
     
     async def poll_messages(self):
         last_row_id = await self.db.get_last_processed_row_id()
+        
+        if last_row_id == 0:
+            logger.info("First run detected, initializing to current max ROWID to skip historical messages")
+            last_row_id = await self.monitor.get_current_max_row_id()
+            await self.db.update_last_processed_row_id(last_row_id)
+            logger.info(f"Initialized last_processed_row_id to {last_row_id}")
+        
         logger.info(f"Starting message polling from row ID {last_row_id}")
         
         while self.running:
