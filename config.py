@@ -12,6 +12,8 @@ class Config:
     MAX_CONCURRENT_REQUESTS = 20
     APPLESCRIPT_RETRY_COUNT = 3
     APPLESCRIPT_RETRY_DELAY = 1
+    ENABLE_READ_RECEIPTS = os.getenv('ENABLE_READ_RECEIPTS', 'true').lower() == 'true'
+    ENABLE_TYPING_INDICATOR = os.getenv('ENABLE_TYPING_INDICATOR', 'true').lower() == 'true'
     
     @classmethod
     def validate(cls):
