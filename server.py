@@ -30,6 +30,8 @@ class EchoServer:
         self.gui_lock = asyncio.Lock()
         self.running = False
         self.tasks = set()
+        self.latest_message_id = {}
+        self.message_lock = asyncio.Lock()
     
     @staticmethod
     def split_into_messages(text: str, max_messages: int = 5) -> list:
@@ -70,12 +72,19 @@ class EchoServer:
         await self.ai_client.init_session()
         logger.info("Echo Server initialized successfully")
     
-    async def handle_conversation(self, sender_id: str, message_text: str):
+    async def handle_conversation(self, sender_id: str, message_text: str, message_id: int):
         async with self.semaphore:
             try:
-                logger.info(f"Handling conversation for {sender_id}")
+                logger.info(f"Handling conversation for {sender_id} (message_id: {message_id})")
                 
                 await self.db.save_message(sender_id, message_text, is_from_user=True)
+                
+                await asyncio.sleep(0.3)
+                
+                async with self.message_lock:
+                    if self.latest_message_id.get(sender_id) != message_id:
+                        logger.info(f"Discarding message {message_id} from {sender_id} - newer message received")
+                        return
                 
                 if Config.ENABLE_TYPING_INDICATOR:
                     async with self.gui_lock:
@@ -88,6 +97,14 @@ class EchoServer:
                     message_text=message_text,
                     conversation_history=conversation_history
                 )
+                
+                async with self.message_lock:
+                    if self.latest_message_id.get(sender_id) != message_id:
+                        logger.info(f"Discarding AI response for message {message_id} from {sender_id} - newer message received")
+                        if Config.ENABLE_TYPING_INDICATOR:
+                            async with self.gui_lock:
+                                await self.message_sender.clear_dot_from_message_field()
+                        return
                 
                 if ai_response:
                     message_parts = self.split_into_messages(ai_response, max_messages=5)
@@ -149,9 +166,12 @@ class EchoServer:
                 if messages:
                     logger.info(f"Found {len(messages)} new message(s)")
                     
-                    for sender_id, message_text, _ in messages:
+                    for sender_id, message_text, row_id in messages:
+                        async with self.message_lock:
+                            self.latest_message_id[sender_id] = row_id
+                        
                         task = asyncio.create_task(
-                            self.handle_conversation(sender_id, message_text)
+                            self.handle_conversation(sender_id, message_text, row_id)
                         )
                         self.tasks.add(task)
                         task.add_done_callback(self.tasks.discard)
