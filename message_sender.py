@@ -22,23 +22,9 @@ class MessageSender:
         applescript = f'''
         tell application "Messages"
             activate
-            delay 0.3
-            
-            set targetService to 1st account whose service type = iMessage
-            set targetBuddy to participant "{escaped_recipient}" of targetService
-            set targetChat to missing value
-            
-            repeat with aChat in chats
-                if targetBuddy is in participants of aChat then
-                    set targetChat to aChat
-                    exit repeat
-                end if
-            end repeat
-            
-            if targetChat is not missing value then
-                set id of targetChat to id of targetChat
-            end if
         end tell
+        
+        delay 0.5
         
         tell application "System Events"
             tell process "Messages"
@@ -46,17 +32,13 @@ class MessageSender:
                     set frontmost to true
                     delay 0.3
                     
-                    keystroke "f" using command down
-                    delay 0.3
-                    keystroke "{escaped_recipient}"
-                    delay 0.5
-                    keystroke return
+                    keystroke "n" using command down
                     delay 0.4
                     
-                    keystroke "a" using command down
-                    delay 0.1
+                    keystroke "{escaped_recipient}"
+                    delay 0.4
                     
-                    click text area 1 of splitter group 1 of window 1
+                    keystroke tab
                     delay 0.2
                     
                     keystroke "."
@@ -69,7 +51,7 @@ class MessageSender:
         '''
         
         try:
-            logger.debug(f"Navigating to chat and showing typing indicator for {recipient}")
+            logger.debug(f"Showing typing indicator for {recipient}")
             
             process = await asyncio.create_subprocess_exec(
                 'osascript',
@@ -98,11 +80,11 @@ class MessageSender:
         tell application "System Events"
             tell process "Messages"
                 try
-                    click text area 1 of splitter group 1 of window 1
-                    delay 0.05
                     keystroke "a" using command down
                     delay 0.05
                     key code 51
+                    delay 0.05
+                    key code 53
                 on error errMsg
                     log errMsg
                 end try
@@ -111,7 +93,7 @@ class MessageSender:
         '''
         
         try:
-            logger.debug("Clearing dot from message field")
+            logger.debug("Clearing dot and closing new message window")
             
             process = await asyncio.create_subprocess_exec(
                 'osascript',
