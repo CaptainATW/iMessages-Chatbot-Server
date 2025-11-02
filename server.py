@@ -42,13 +42,10 @@ class EchoServer:
             try:
                 logger.info(f"Handling conversation for {sender_id}")
                 
-                if Config.ENABLE_READ_RECEIPTS:
-                    await self.message_sender.mark_as_read(sender_id)
-                
                 await self.db.save_message(sender_id, message_text, is_from_user=True)
                 
                 if Config.ENABLE_TYPING_INDICATOR:
-                    await self.message_sender.show_typing_indicator(sender_id)
+                    await self.message_sender.navigate_to_chat_and_type_dot(sender_id)
                 
                 conversation_history = await self.db.get_conversation_history(sender_id)
                 
@@ -59,7 +56,7 @@ class EchoServer:
                 )
                 
                 if Config.ENABLE_TYPING_INDICATOR:
-                    await self.message_sender.clear_typing_indicator(sender_id)
+                    await self.message_sender.clear_dot_from_message_field()
                 
                 if ai_response:
                     success = await self.message_sender.send_message(sender_id, ai_response)
