@@ -100,12 +100,12 @@ class EchoServer:
                                     await self.message_sender.clear_dot_from_message_field()
                             else:
                                 if Config.ENABLE_TYPING_INDICATOR:
+                                    await self.message_sender.navigate_to_chat_and_type_dot(sender_id)
+                                    
                                     typing_delay = self.calculate_typing_delay(message_part)
-                                    logger.debug(f"Waiting {typing_delay}s before next message to {sender_id}")
+                                    logger.debug(f"Showing typing indicator for {typing_delay}s before next message to {sender_id}")
                                     await asyncio.sleep(typing_delay)
                                     
-                                    await self.message_sender.navigate_to_chat_and_type_dot(sender_id)
-                                    await asyncio.sleep(0.5)
                                     await self.message_sender.clear_dot_from_message_field()
                             
                             success = await self.message_sender.send_message(sender_id, message_part)
