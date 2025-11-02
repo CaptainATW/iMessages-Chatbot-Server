@@ -22,33 +22,32 @@ class MessageSender:
         applescript = f'''
         tell application "Messages"
             activate
-            delay 0.3
+            delay 0.5
+            
+            set targetChat to missing value
+            repeat with aChat in chats
+                repeat with aBuddy in participants of aChat
+                    if id of aBuddy contains "{escaped_recipient}" then
+                        set targetChat to aChat
+                        exit repeat
+                    end if
+                end repeat
+                if targetChat is not missing value then exit repeat
+            end repeat
         end tell
         
         tell application "System Events"
             tell process "Messages"
                 try
                     set frontmost to true
-                    delay 0.2
+                    delay 0.3
                     
-                    set chatFound to false
-                    repeat with aRow in (rows of table 1 of scroll area 1 of splitter group 1 of window 1)
-                        if description of aRow contains "{escaped_recipient}" then
-                            select aRow
-                            set chatFound to true
-                            delay 0.3
-                            exit repeat
-                        end if
-                    end repeat
-                    
-                    if not chatFound then
-                        keystroke "n" using command down
-                        delay 0.5
-                        keystroke "{escaped_recipient}"
-                        delay 0.5
-                        keystroke return
-                        delay 0.3
-                    end if
+                    keystroke "f" using {{command down, option down}}
+                    delay 0.3
+                    keystroke "{escaped_recipient}"
+                    delay 0.5
+                    keystroke return
+                    delay 0.5
                     
                 on error errMsg
                     return errMsg
@@ -87,41 +86,29 @@ class MessageSender:
         applescript = f'''
         tell application "Messages"
             activate
-            delay 0.3
+            delay 0.5
         end tell
         
         tell application "System Events"
             tell process "Messages"
                 try
                     set frontmost to true
-                    delay 0.2
+                    delay 0.3
                     
-                    set chatFound to false
-                    repeat with aRow in (rows of table 1 of scroll area 1 of splitter group 1 of window 1)
-                        if description of aRow contains "{escaped_recipient}" then
-                            select aRow
-                            set chatFound to true
-                            delay 0.3
-                            exit repeat
-                        end if
-                    end repeat
-                    
-                    if not chatFound then
-                        keystroke "n" using command down
-                        delay 0.5
-                        keystroke "{escaped_recipient}"
-                        delay 0.5
-                        keystroke return
-                        delay 0.3
-                    end if
+                    keystroke "f" using {{command down, option down}}
+                    delay 0.3
+                    keystroke "{escaped_recipient}"
+                    delay 0.5
+                    keystroke return
+                    delay 0.5
                     
                     click text area 1 of splitter group 1 of window 1
-                    delay 0.1
+                    delay 0.2
                     
                     keystroke "."
-                    delay 0.05
+                    delay 0.1
                     keystroke "."
-                    delay 0.05
+                    delay 0.1
                     keystroke "."
                     
                 on error errMsg
