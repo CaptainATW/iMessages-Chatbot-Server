@@ -27,8 +27,41 @@ class EchoServer:
         self.ai_client = AIClient()
         self.message_sender = MessageSender()
         self.semaphore = asyncio.Semaphore(Config.MAX_CONCURRENT_REQUESTS)
+        self.gui_lock = asyncio.Lock()
         self.running = False
         self.tasks = set()
+    
+    @staticmethod
+    def split_into_messages(text: str, max_messages: int = 5) -> list:
+        if not text:
+            return []
+        
+        parts = text.split('\n\n')
+        parts = [p.strip() for p in parts if p.strip()]
+        
+        if len(parts) <= max_messages:
+            return parts
+        
+        result = parts[:max_messages - 1]
+        remaining = '\n\n'.join(parts[max_messages - 1:])
+        result.append(remaining)
+        
+        return result
+    
+    @staticmethod
+    def calculate_typing_delay(message: str) -> float:
+        length = len(message)
+        
+        if length < 20:
+            return 1.0
+        elif length < 50:
+            return 1.5
+        elif length < 100:
+            return 2.0
+        elif length < 200:
+            return 2.5
+        else:
+            return 3.0
     
     async def init(self):
         logger.info("Initializing Echo Server...")
@@ -45,7 +78,8 @@ class EchoServer:
                 await self.db.save_message(sender_id, message_text, is_from_user=True)
                 
                 if Config.ENABLE_TYPING_INDICATOR:
-                    await self.message_sender.navigate_to_chat_and_type_dot(sender_id)
+                    async with self.gui_lock:
+                        await self.message_sender.navigate_to_chat_and_type_dot(sender_id)
                 
                 conversation_history = await self.db.get_conversation_history(sender_id)
                 
@@ -55,21 +89,46 @@ class EchoServer:
                     conversation_history=conversation_history
                 )
                 
-                if Config.ENABLE_TYPING_INDICATOR:
-                    await self.message_sender.clear_dot_from_message_field()
-                
                 if ai_response:
-                    success = await self.message_sender.send_message(sender_id, ai_response)
+                    message_parts = self.split_into_messages(ai_response, max_messages=5)
+                    logger.info(f"Split response into {len(message_parts)} message(s) for {sender_id}")
                     
-                    if success:
-                        await self.db.save_message(sender_id, ai_response, is_from_user=False)
-                        logger.info(f"Successfully handled conversation for {sender_id}")
-                    else:
-                        logger.error(f"Failed to send message to {sender_id}")
+                    async with self.gui_lock:
+                        for i, message_part in enumerate(message_parts):
+                            if i == 0:
+                                if Config.ENABLE_TYPING_INDICATOR:
+                                    await self.message_sender.clear_dot_from_message_field()
+                            else:
+                                if Config.ENABLE_TYPING_INDICATOR:
+                                    typing_delay = self.calculate_typing_delay(message_part)
+                                    logger.debug(f"Waiting {typing_delay}s before next message to {sender_id}")
+                                    await asyncio.sleep(typing_delay)
+                                    
+                                    await self.message_sender.navigate_to_chat_and_type_dot(sender_id)
+                                    await asyncio.sleep(0.5)
+                                    await self.message_sender.clear_dot_from_message_field()
+                            
+                            success = await self.message_sender.send_message(sender_id, message_part)
+                            
+                            if success:
+                                await self.db.save_message(sender_id, message_part, is_from_user=False)
+                                logger.info(f"Sent message part {i+1}/{len(message_parts)} to {sender_id}")
+                            else:
+                                logger.error(f"Failed to send message part {i+1} to {sender_id}")
+                                break
+                            
+                            if i < len(message_parts) - 1:
+                                await asyncio.sleep(0.3)
+                    
+                    logger.info(f"Successfully handled conversation for {sender_id}")
                 else:
                     logger.warning(f"No AI response received for {sender_id}, sending fallback")
                     fallback_message = "I'm having trouble processing your message right now. Please try again in a moment."
-                    await self.message_sender.send_message(sender_id, fallback_message)
+                    
+                    async with self.gui_lock:
+                        if Config.ENABLE_TYPING_INDICATOR:
+                            await self.message_sender.clear_dot_from_message_field()
+                        await self.message_sender.send_message(sender_id, fallback_message)
                     
             except Exception as e:
                 logger.error(f"Error handling conversation for {sender_id}: {e}", exc_info=True)
