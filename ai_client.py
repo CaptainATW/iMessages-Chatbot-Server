@@ -11,10 +11,10 @@ class AIClient:
         self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
         self.model = 'gemini-2.5-flash'
         try:
-            with open('system_instruction.txt', 'r', encoding='utf-8') as f:
+            with open('data/prompt.txt', 'r', encoding='utf-8') as f:
                 self.system_instruction = f.read().strip()
         except FileNotFoundError:
-            logger.warning("system_instruction.txt not found, using default system instruction.")
+            logger.warning("data/prompt.txt not found, using default system instruction.")
             self.system_instruction = 'You are a helpful, empathetic AI assistant.'
     async def init_session(self):
         logger.info("Gemini AI client initialized")
