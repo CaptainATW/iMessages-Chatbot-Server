@@ -98,15 +98,6 @@ class EchoServer:
                             if i == 0:
                                 if Config.ENABLE_TYPING_INDICATOR:
                                     await self.message_sender.clear_dot_from_message_field()
-                            else:
-                                if Config.ENABLE_TYPING_INDICATOR:
-                                    await self.message_sender.navigate_to_chat_and_type_dot(sender_id)
-                                    
-                                    typing_delay = self.calculate_typing_delay(message_part)
-                                    logger.debug(f"Showing typing indicator for {typing_delay}s before next message to {sender_id}")
-                                    await asyncio.sleep(typing_delay)
-                                    
-                                    await self.message_sender.clear_dot_from_message_field()
                             
                             success = await self.message_sender.send_message(sender_id, message_part)
                             
@@ -118,7 +109,14 @@ class EchoServer:
                                 break
                             
                             if i < len(message_parts) - 1:
-                                await asyncio.sleep(0.3)
+                                if Config.ENABLE_TYPING_INDICATOR:
+                                    await self.message_sender.navigate_to_chat_and_type_dot(sender_id)
+                                    
+                                    typing_delay = self.calculate_typing_delay(message_parts[i + 1])
+                                    logger.debug(f"Typing indicator shown, waiting {typing_delay}s before next message to {sender_id}")
+                                    await asyncio.sleep(typing_delay)
+                                    
+                                    await self.message_sender.clear_dot_from_message_field()
                     
                     logger.info(f"Successfully handled conversation for {sender_id}")
                 else:
