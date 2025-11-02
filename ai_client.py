@@ -11,10 +11,10 @@ class AIClient:
         self.client = genai.Client(api_key=Config.GEMINI_API_KEY)
         self.model = 'gemini-2.5-flash'
         try:
-            with open('system_instruction.txt', 'r', encoding='utf-8') as f:
+            with open('data/prompt.txt', 'r', encoding='utf-8') as f:
                 self.system_instruction = f.read().strip()
         except FileNotFoundError:
-            logger.warning("system_instruction.txt not found, using default system instruction.")
+            logger.warning("data/prompt.txt not found, using default system instruction.")
             self.system_instruction = 'You are a helpful, empathetic AI assistant.'
     async def init_session(self):
         logger.info("Gemini AI client initialized")
@@ -29,6 +29,24 @@ class AIClient:
             config = types.GenerateContentConfig(
                 system_instruction=self.system_instruction,
                 temperature=0.7,
+                safety_settings=[
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                        threshold=types.HarmBlockThreshold.BLOCK_NONE,
+                    ),
+                ]
             )
             
             logger.debug(f"Sending request to Gemini API for {sender_id}")
