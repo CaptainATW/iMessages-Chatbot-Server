@@ -3,11 +3,11 @@ import signal
 import logging
 import sys
 from datetime import datetime
-from config import Config
-from database import ConversationDatabase
-from message_monitor import MessageMonitor
-from ai_client import AIClient
-from message_sender import MessageSender
+from src.config import Config
+from src.database import ConversationDatabase
+from src.message_monitor import MessageMonitor
+from src.ai_client import AIClient
+from src.message_sender import MessageSender
 
 logging.basicConfig(
     level=logging.INFO,

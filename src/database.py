@@ -2,7 +2,7 @@ import aiosqlite
 import logging
 from datetime import datetime
 from typing import List, Tuple, Optional
-from config import Config
+from src.config import Config
 
 logger = logging.getLogger(__name__)
 

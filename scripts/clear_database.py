@@ -4,7 +4,9 @@ import sys
 import sqlite3
 from pathlib import Path
 
-DB_PATH = 'conversation_state.db'
+SCRIPT_DIR = Path(__file__).parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+DB_PATH = PROJECT_ROOT / 'conversation_state.db'
 
 def clear_all():
     if os.path.exists(DB_PATH):

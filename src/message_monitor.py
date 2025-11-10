@@ -1,7 +1,7 @@
 import aiosqlite
 import logging
 from typing import List, Tuple
-from config import Config
+from src.config import Config
 
 logger = logging.getLogger(__name__)
 
