@@ -1,4 +1,10 @@
-<img align="right" alt="logo" width="300px" src="docs/images/demo.gif" />
+<table align="right" border="0">
+  <tr>
+    <td width="300px">
+      <img alt="logo" width="290px" src="docs/images/demo.gif" />
+    </td>
+  </tr>
+</table>
 
 # iMessages Chatbot Server
 
@@ -6,11 +12,11 @@ iMessage has no public API. This project provides a high-performance solution by
 
 ## Key Features
 
-*   Manages up to 20 concurrent conversations at the same time using asynchronous API calls.
-*   Injects a realistic perceived typing latency by automatically chunking multi-paragraph AI responses and sending them sequentially with a dynamically calculated delay.
-*   Implements an asynchronous debounce timer (0.3s) to batch rapid incoming messages from a user, preventing premature API calls and providing the AI with a more complete conversational context.
-*   Achieves stateful conversation by maintaining a persistent SQLite-backed message history for each unique user, which is re-injected as context in subsequent API calls.
-*   Simulates native iMessage interactivity through targeted AppleScript automation, triggering the "..." typing indicator during AI processing and marking messages as "Read" as soon as they are ingested.
+*   Manages up to **20 concurrent conversations** using asynchronous API calls and a `semaphore` to control load on the AI backend.
+*   Injects a realistic typing latency by automatically chunking multi-paragraph AI responses at `\n\n` delimiters and sending each part sequentially with a **dynamic delay** between `1.0` and `3.0` seconds.
+*   Implements an **asynchronous debounce timer** of `0.3s` to batch rapid incoming messages from a single user, preventing premature API calls and ensuring the AI receives a more complete conversational context.
+*   Maintains **persistent conversation memory** by caching each user's message history in a `SQLite` database, ensuring all interactions are stateful and context-aware.
+*   Leverages targeted `AppleScript` automation to simulate native iMessage interactivity, triggering the **typing indicator** during AI processing and programmatically marking messages as **Read** upon ingestion from the `chat.db` file.
 
 ---
 
